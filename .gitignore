@@ -1,0 +1,6 @@
+**/dist/*
+src/*
+examples/**/**_templ.go
+
+# binaries
+main

@@ -1,0 +1,43 @@
+package views
+
+import "fest"
+
+templ Index() {
+	@Main() {
+		<article>
+			<h2>First Post</h2>
+			<p>Welcome to My Site!</p>
+			<p>See this awesome <a href="/posts/first">page</a></p>
+			<p>Title from context: { fest.GetTitle(ctx) }</p>
+		</article>
+	}
+}
+
+templ Main() {
+	<header>
+		<h1>My Site</h1>
+		<ul>
+			<li><a href="/">Home</a></li>
+			<li><a href="/about">About Us</a></li>
+		</ul>
+	</header>
+	<main>
+		{ children... }
+	</main>
+}
+
+templ AboutUs() {
+	@Main() {
+		<article>
+			<h2>About Us</h2>
+			<p>I'm gonna conquer the world!</p>
+		</article>
+	}
+}
+
+templ Article(title, content string) {
+    <article>
+        <h2>{ title }</h2>
+        <p>{ content }</p>
+    </article>
+}

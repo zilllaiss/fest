@@ -1,0 +1,55 @@
+package temfest 
+
+templ Base(title, lang string, headerComps, bodyComps []templ.Component) {
+	<!DOCTYPE html>
+	<html lang={ lang }>
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            if len(title) > 0 { 
+                <title>{ title }</title>
+            }
+			if headerComps != nil {
+				for _, v := range headerComps {
+					@v
+				}
+			}
+		</head>
+		<body>
+			if bodyComps != nil {
+				for _, v := range bodyComps {
+					@v
+				}
+			}
+		</body>
+	</html>
+}
+
+// this is used when overriding base component in Route
+templ Override(base, comp templ.Component) {
+    @base {
+        @comp
+    }
+}
+
+templ ImportScript(path string, module, useDefer bool) {
+    <script src={ path } 
+        if module {
+            type="module"
+        }
+        defer?={ useDefer }
+    ></script>
+}
+
+templ ImportStyle(path string) {
+    <link rel="stylesheet" href={ path }/>
+}
+
+templ ImportIcon(path, iconType string) {
+    {{ if len(path) == 0 { path = "/favicon.ico" }}}
+    <link rel="icon" href={ path } 
+        if len(iconType) != 0 {
+            type={ iconType }
+        }
+    />
+}
