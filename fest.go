@@ -3,7 +3,7 @@ package fest
 import (
 	"context"
 	"errors"
-	"fest/temfest"
+	"github.com/zilllaiss/fest/temfest"
 	"fmt"
 	"os"
 	"path/filepath"
