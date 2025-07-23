@@ -5,8 +5,8 @@ Fantastically Easy Static-site with Templ (FEST) is a minimalistic static-site g
 ## FEATURES
 
 - Lightweight, only import Templ as dependencies.
-- Use any Go libraries in is ecosystem and use it in your Go or Templ file.
-- Routing features that is inspired router libraries, particularly [Chi](https://github.com/go-chi/chi).
+- Use any Go libraries in is ecosystem and use it in your Go or Templ files.
+- Routing feature that is inspired by router libraries, particularly [Chi](https://github.com/go-chi/chi).
 
 ## INSTALL
 
