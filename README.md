@@ -1,3 +1,9 @@
+<p>
+  <a href="https://pkg.go.dev/github.com/zilllaiss/fest">
+    <img src="https://pkg.go.dev/badge/github.com/zilllaiss/fest" alt="Go Reference"/>
+  </a>
+</p>
+
 # FEST 
 
 Fantastically Easy Static-site with Templ (FEST) is a minimalistic static-site generator that integrates nicely with Go & Templ.
@@ -7,6 +13,8 @@ Fantastically Easy Static-site with Templ (FEST) is a minimalistic static-site g
 - Lightweight, only import Templ as dependencies.
 - Use any Go libraries in is ecosystem and use it in your Go or Templ files.
 - Routing feature that is inspired by router libraries, particularly [Chi](https://github.com/go-chi/chi).
+
+You can see the documentation/API references [here](https://pkg.go.dev/github.com/zilllaiss/fest).
 
 ## INSTALL
 
