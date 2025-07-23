@@ -2,10 +2,11 @@ package routes
 
 import (
 	"context"
-	"fest"
-	"fest/examples/views"
 	"fmt"
 	"strconv"
+
+	"github.com/zilllaiss/fest"
+	"github.com/zilllaiss/fest/examples/views"
 
 	"github.com/a-h/templ"
 )

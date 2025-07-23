@@ -1,10 +1,11 @@
 package examples
 
 import (
-	"fest"
-	"fest/examples/basic"
 	"os"
 	"testing"
+
+	"github.com/zilllaiss/fest"
+	"github.com/zilllaiss/fest/examples/basic"
 )
 
 func TestExamples(t *testing.T) {

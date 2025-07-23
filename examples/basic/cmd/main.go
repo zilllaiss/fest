@@ -1,6 +1,6 @@
 package main
 
-import "fest/examples/basic"
+import "github.com/zilllaiss/fest/examples/basic"
 
 func main() {
 	// use the default config

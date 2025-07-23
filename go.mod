@@ -1,4 +1,4 @@
-module fest
+module github.com/zilllaiss/fest
 
 go 1.24.4
 

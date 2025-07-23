@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fest/examples/routes"
+	"github.com/zilllaiss/fest/examples/routes"
 	"log"
 )
 

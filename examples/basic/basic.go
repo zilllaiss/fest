@@ -2,9 +2,10 @@ package basic
 
 import (
 	"context"
-	"fest"
-	"fest/examples/views"
-	"fest/temfest"
+
+	"github.com/zilllaiss/fest"
+	"github.com/zilllaiss/fest/examples/views"
+	"github.com/zilllaiss/fest/temfest"
 
 	"github.com/a-h/templ"
 )
