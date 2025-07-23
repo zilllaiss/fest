@@ -45,8 +45,13 @@ templ Index() {
 }
 
 templ About(name string) {
-    <h1></h1>
+    <h1>Hello</h1>
     <p>My name is {name}. I'm a Go developer</p>
+}
+
+templ Post(title, content string) {
+    <h1>{ title }</h1>
+    <article>{ content }</article>
 }
 ```
 
@@ -75,7 +80,7 @@ func main() {
 
 	// add global style in the header
 	g.Head.Add(
-        // fest provides commonly used templates in temfest package
+		// fest provides commonly used templates in temfest package
 		temfest.ImportStyle("/assets/styles.css"),
 		temfest.ImportStyle("/assets/nested/styles.css"),
 	)
@@ -83,18 +88,44 @@ func main() {
 	// add homepage. This will use the site's name as Route title is not set
 	g.AddRoute("/", views.Index())
 
-    // set the page title. If not set, fest will use the site's name by default
-	g.AddRoute("/about", views.AboutUs()).
+	// set the page title. If not set, fest will use the site's name by default
+	g.AddRoute("/about", views.About("Zill_Laiss")).
 		SetTitle("About Us")
 
 	// you can use any templ component like templ.Raw
 	g.AddRoute("/posts/first", templ.Raw("<h1>Hello</h1>")).
 		SetTitle("First Post")
 
+		// you can also
+	posts := []post{
+		{title: "second", content: "second post"},
+		{title: "third", content: "third post"},
+	}
+
+	// this {s} is a slug and will be replaced, by default it is 1-based index
+	// of slices' item passed previously unless your override it with SetSlug.
+	// see postsFn below
+	fest.NewRoutesT("/posts/{s}", posts).
+		SetTitle("{s}").AddToGenerator(g, postsFn)
+
 	// render all components
 	if err := g.Generate(); err != nil {
 		panic(err)
-    }
+	}
+}
+
+// a simple blog post with title and content
+type post struct {
+	title, content string
+}
+
+func postsFn(ctx context.Context, rp *fest.RoutesParam[post]) (templ.Component, error) {
+	// get the item passed from before
+	p := rp.GetItem()
+	// setting the slug with title
+	rp.SetSlug(p.title)
+
+	return views.Post(p.title, p.content), nil
 }
 ```
 
