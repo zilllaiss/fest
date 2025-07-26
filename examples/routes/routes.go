@@ -38,7 +38,7 @@ var simpleSlugs = []string{
 	"seventh", "eight", "ninth",
 }
 
-func simple(ctx context.Context, rp *fest.RoutesParam[string]) (templ.Component, error) {
+func simple(ctx context.Context, rp *fest.RouteParam[string]) (templ.Component, error) {
 	// For this example, we sill use a templ.Raw for simplicity.
 	// You can get the slug using GetSlug()
 	return templ.Raw(fmt.Sprintf("<h1>%v</h1>", rp.GetSlug())), nil
@@ -58,7 +58,7 @@ func getCustomData() []*something {
 	return s
 }
 
-func custom(ctx context.Context, rp *fest.RoutesParam[*something]) (templ.Component, error) {
+func custom(ctx context.Context, rp *fest.RouteParam[*something]) (templ.Component, error) {
 	// Get the individual item catched from data.
 	item := rp.GetItem()
 	// Set the slug. By default, NewRoutesT will use the 1-based indices
@@ -70,7 +70,7 @@ func custom(ctx context.Context, rp *fest.RoutesParam[*something]) (templ.Compon
 
 func pageFn(
 	ctx context.Context,
-	rp *fest.RoutesParam[*fest.Pagination[*something]],
+	rp *fest.RouteParam[*fest.Pagination[*something]],
 ) (templ.Component, error) {
 	page := rp.GetItem()
 	raw := fmt.Sprintf("<h1>page %d of %d</h1>", page.Current, page.Total)

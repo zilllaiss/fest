@@ -3,11 +3,12 @@ package fest
 import (
 	"context"
 	"errors"
-	"github.com/zilllaiss/fest/temfest"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/zilllaiss/fest/temfest"
 
 	"github.com/a-h/templ"
 )
@@ -17,13 +18,23 @@ var wd = func() string {
 	return w
 }()
 
+// Site title options
 type SiteTitleOption int
 
 const (
+	// Show the site title at the end with dash as seperator
 	SiteTitleDashBack SiteTitleOption = iota
+
+	// Show the site title at the beginning with dash as seperator
 	SiteTitleDashFront
+
+	// Show the site title at the back with a colon as seperator
 	SiteTitleColonBack
+
+	// Show the site title at the beginning with a colon as seperator
 	SiteTitleColonFront
+
+	// Don't show site title
 	SiteTitleNone
 )
 
@@ -39,6 +50,7 @@ const (
 // Get the current router's title. This will panic if this is used outside templ.
 func GetTitle(ctx context.Context) string { return ctx.Value(ctxKeyTitle).(string) }
 
+// The main type containing configuration for static files generation.
 type Generator struct {
 	Head Head
 	Body Body
@@ -58,6 +70,7 @@ type Generator struct {
 	files, dirs []srcDst
 }
 
+// Generator configurations.
 type GeneratorConfig struct {
 	// Don't use the built-in base template (temfest.Base)
 	NoBase bool
@@ -101,6 +114,8 @@ func NewGenerator(ctx context.Context, siteName string, config *GeneratorConfig)
 	return g
 }
 
+// Add a single route with the specified path that will generate a file from the component
+// relative from the Generator destionation.
 func (g *Generator) AddRoute(path string, comp templ.Component) *Route {
 	r := g.inspect(path, comp)
 
@@ -108,20 +123,11 @@ func (g *Generator) AddRoute(path string, comp templ.Component) *Route {
 	return r
 }
 
-func (g *Generator) inspect(path string, comp templ.Component) *Route {
-	if path[0] == '/' {
-		path = string(path[1:])
-	}
-
-	r := &Route{path: path, comp: comp}
-
-	if strings.HasSuffix(path, "html") {
-		r.isHTMLFile = true
-	}
-
-	return r
-}
-
+// Add a single route with the specified path that
+// will generate a file from the component
+// relative from the Generator destionation.
+// All errors returned from this function will be handled
+// in g.Generate method.
 func (g *Generator) AddRouteFunc(
 	path string, fn func(context.Context) (templ.Component, error),
 ) *Route {
@@ -139,6 +145,7 @@ func (g *Generator) AddRouteFunc(
 	return r
 }
 
+// Return the generator context
 func (g *Generator) Context() context.Context { return g.ctx }
 
 // Copy src that is a file to the dst inside generated location.
@@ -162,15 +169,15 @@ func (g *Generator) CopyDir(src, dst string) {
 	})
 }
 
-// Generate all the components.
+// Generate all the components added to g.
 func (g *Generator) Generate() error {
 	if err := os.MkdirAll(g.dest, 0744); err != nil {
-		return err
+		return fmt.Errorf("error making dir: %w", err)
 	}
 
 	root, err := os.OpenRoot(g.dest)
 	if err != nil {
-		return err
+		return fmt.Errorf("error opening root: %w", err)
 	}
 	g.root = root
 
@@ -180,22 +187,22 @@ func (g *Generator) Generate() error {
 	if val != nil {
 		errs := val.(map[string]error)
 		var complete error
-
+		route := RouteError{complete: complete}
 		for k, err := range errs {
 			complete = fmt.Errorf("%v: %w; ", k, err)
 		}
-		return RouteError{complete: complete}
+		return fmt.Errorf("%w (%v)", route, complete.Error())
 	}
 
 	for _, v := range g.dirs {
 		if err := copyDir(v.src, filepath.Join(g.dest, v.dst)); err != nil {
-			return fmt.Errorf("error while copying \"%v\" to \"%v\": %w", v.src, v.dst, err)
+			return fmt.Errorf("error copying \"%v\" to \"%v\": %w", v.src, v.dst, err)
 		}
 	}
 
 	for _, v := range g.files {
 		if err := copyFile(v.src, filepath.Join(g.dest, v.dst)); err != nil {
-			return fmt.Errorf("error while copying \"%v\" to \"%v\" %w", v.src, v.dst, err)
+			return fmt.Errorf("error copying \"%v\" to \"%v\" %w", v.src, v.dst, err)
 		}
 	}
 
@@ -266,6 +273,20 @@ func (g *Generator) Generate() error {
 		}
 	}
 	return nil
+}
+
+func (g *Generator) inspect(path string, comp templ.Component) *Route {
+	if path[0] == '/' {
+		path = string(path[1:])
+	}
+
+	r := &Route{path: path, comp: comp}
+
+	if strings.HasSuffix(path, "html") {
+		r.isHTMLFile = true
+	}
+
+	return r
 }
 
 func (g *Generator) addError(path string, err error) {

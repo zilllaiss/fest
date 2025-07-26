@@ -12,7 +12,7 @@ Fantastically Easy Static-site with Templ (FEST) is a minimalistic static-site g
 
 - Write static-site with Go.
 - Use any Go libraries in its ecosystem and use it in your Go or Templ files.
-- Lightweight, only import Templ as dependency.
+- Lightweight and modular; only import Templ as dependency for the main package (fest).
 - Routing feature that is inspired by router libraries, particularly [Chi](https://github.com/go-chi/chi).
 
 You can see the documentation/API references [here](https://pkg.go.dev/github.com/zilllaiss/fest).
@@ -96,24 +96,26 @@ func main() {
 	g.AddRoute("/posts/first", templ.Raw("<h1>Hello</h1>")).
 		SetTitle("First Post")
 
-		// you can also
-	posts := []post{
-		{title: "second", content: "second post"},
-		{title: "third", content: "third post"},
-	}
-
-	// this {s} is a slug and will be replaced, by default it is 1-based index
-	// of slices' item passed previously unless your override it with SetSlug.
-	// see postsFn below
-	fest.NewRoutesT("/posts/{s}", posts).
-		SetTitle("{s}").AddToGenerator(g, postsFn)
-
 	// render all components
 	if err := g.Generate(); err != nil {
 		panic(err)
 	}
 }
+```
 
+Then run the binary to generate your website.
+```sh 
+# if you haven't run templ generate already
+templ generate && go run main.go
+```
+
+By default it is available in `/dest` folder inside your project directory.
+
+See [examples]("https://github.com/zilllaiss/templ") for more.
+
+#### Multiple routes
+
+```go 
 // a simple blog post with title and content
 type post struct {
 	title, content string
@@ -127,17 +129,20 @@ func postsFn(ctx context.Context, rp *fest.RoutesParam[post]) (templ.Component, 
 
 	return views.Post(p.title, p.content), nil
 }
+
+// in the main funcion
+
+posts := []post{
+    {title: "second", content: "second post"},
+    {title: "third", content: "third post"},
+}
+
+// this {s} is a slug and will be replaced, by default it is 1-based index
+// of slices' item passed previously unless your override it with SetSlug.
+// see postsFn below
+fest.NewRoutesT("/posts/{s}", posts).
+    SetTitle("{s}").AddToGenerator(g, postsFn)
 ```
-
-Then run the binary to generate your website.
-```sh 
-# if you haven't run templ generate already
-templ generate && go run main.go
-```
-
-By default it is available in `/dest` folder inside your project directory.
-
-See [examples]("https://github.com/zilllaiss/templ") for more.
 
 ## LICENSE
 

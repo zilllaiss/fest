@@ -13,6 +13,8 @@ import (
 	"github.com/a-h/templ"
 )
 
+// Generate multiple routes. User must call AddToGenerator
+// in order to add the routes to the Generator.
 type Routes[T any] struct {
 	path    string
 	title   string
@@ -20,19 +22,31 @@ type Routes[T any] struct {
 	useData bool
 }
 
+// Create routes from the data with specified size.
+// By default, the slug will be the same as string item
 func NewRoutes(path string, slugs []string) *Routes[string] {
 	return &Routes[string]{path: path, data: slugs, useData: true}
 }
 
+// Create routes from the data with specified size.
+// By default, the slug will be 1-based index of the item.
 func NewRoutesT[T any](path string, data []T) *Routes[T] {
 	return &Routes[T]{path: path, data: data}
 }
 
+// A struct containing the information of the current page route.
 type Pagination[T any] struct {
-	Current, Total int
-	Chunk          []T
+	// The current page number
+	Current int
+
+	// The total number of pages, or the last page.
+	Total int
+
+	// The chuck of data sliced with the set size from original data.
+	Chunk []T
 }
 
+// Create routes that will be paginated from data with specified size.
 func NewPaginatedRoutes[T any](path string, data []T, size int) *Routes[*Pagination[T]] {
 	it := slices.Chunk(data, size)
 	r := &Routes[*Pagination[T]]{path: path}
@@ -48,14 +62,15 @@ func NewPaginatedRoutes[T any](path string, data []T, size int) *Routes[*Paginat
 	return r
 }
 
-func (r *Routes[T]) AddToGenerator(g *Generator, fn RoutesFunc[T]) {
+// Add routes to the set Generator.
+func (r *Routes[T]) AddToGenerator(g *Generator, fn RouteFunc[T]) {
 	if !strings.Contains(r.path, "{s}") {
 		g.addError(r.path, errors.New("slug not found"))
 		return
 	}
 	for i, d := range r.data {
 		slug := ternary(r.useData, fmt.Sprintf("%v", r.data[i]), strconv.Itoa(i+1))
-		rp := &RoutesParam[T]{item: d, slug: slug}
+		rp := &RouteParam[T]{item: d, slug: slug}
 
 		comp, err := fn(g.ctx, rp)
 		if err != nil {
@@ -76,19 +91,25 @@ func (r *Routes[T]) AddToGenerator(g *Generator, fn RoutesFunc[T]) {
 	}
 }
 
+// Set each item route's title where `{s}` will be replaced with slug.
 func (r *Routes[T]) SetTitle(title string) *Routes[T] {
 	r.title = title
 	return r
 }
 
-type RoutesFunc[T any] = func(context.Context, *RoutesParam[T]) (templ.Component, error)
+type RouteFunc[T any] = func(context.Context, *RouteParam[T]) (templ.Component, error)
 
-type RoutesParam[T any] struct {
+// The current route parameter. 
+type RouteParam[T any] struct {
 	item T
 	slug string
 }
 
-func (rp *RoutesParam[T]) GetSlug() string     { return rp.slug }
-func (rp *RoutesParam[T]) SetSlug(slug string) { rp.slug = slug }
-func (rp *RoutesParam[T]) GetItem() T          { return rp.item }
+// Get the currently set slug.
+func (rp *RouteParam[T]) GetSlug() string     { return rp.slug }
 
+// Set the slug.
+func (rp *RouteParam[T]) SetSlug(slug string) { rp.slug = slug }
+
+// Get the current data item.
+func (rp *RouteParam[T]) GetItem() T          { return rp.item }
