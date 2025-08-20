@@ -1,9 +1,6 @@
 ---
 title: Second Post
 published: 2025-07-28
-tags:
-  - tag1
-  - tag3
 ---
 
 # Second Post

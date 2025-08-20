@@ -44,7 +44,6 @@ func UseMarkdown(config *fest.GeneratorConfig) error {
 type Post struct {
 	Title     string    `yaml:"title"`
 	Published time.Time `yaml:"published"`
-	Tags      []string  `yaml:"tags"`
 }
 
 func postsFn(

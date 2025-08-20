@@ -1,9 +1,6 @@
 ---
 title: Something
 published: 2025-07-29
-tags:
-  - go
-  - something
 ---
 
 # Something

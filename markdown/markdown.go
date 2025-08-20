@@ -1,3 +1,4 @@
+// Package markdown provides utilities used for parsing mardown files.
 package markdown
 
 import (
@@ -14,7 +15,15 @@ import (
 	"go.abhg.dev/goldmark/toc"
 )
 
-// The type used to process markdown files. It is simple wrapper 
+type MarkdownParser interface {
+	// ParseFiles parses the set markdown file.
+	ParseFile(path string) (*MarkdownData, error)
+
+	// ParseFiles parses all markdown files in a path.
+	ParseFiles(path string) ([]*MarkdownData, error)
+}
+
+// MarkdownProcessor is the default FEST markdown parser. It is simple wrapper
 // of goldmark.Markdown.
 type MarkdownProcessor struct {
 	// The maximum depts of header that will be parsed. Default 3
@@ -23,8 +32,8 @@ type MarkdownProcessor struct {
 	md goldmark.Markdown
 }
 
-// New Markdown used to parse files.
-func NewMarkdown(extensions ...goldmark.Extender) *MarkdownProcessor {
+// NewMarkdown initialize a new markdown parser with default configurations.
+func NewMarkdown(extensions ...goldmark.Extender) MarkdownParser {
 	exts := []goldmark.Extender{&frontmatter.Extender{}}
 	exts = append(exts, extensions...)
 
@@ -34,59 +43,18 @@ func NewMarkdown(extensions ...goldmark.Extender) *MarkdownProcessor {
 	return m
 }
 
-// Parse a markdown file in the specified path.
-func (m *MarkdownProcessor) ParseFile(path string) (MarkdownData, error) {
+// ParseFile a markdown file in the specified path.
+func (m *MarkdownProcessor) ParseFile(path string) (*MarkdownData, error) {
 	if m.TOCMaxDepth == 0 {
 		m.TOCMaxDepth = 3
 	}
-	md, err := m.parseFile(path)
-	if err != nil {
-		return MarkdownData{}, err
-	}
-	return *md, nil
-}
-
-// Parse all markdown files in the specified path.
-func (m *MarkdownProcessor) ParseFiles(path string) ([]*MarkdownData, error) {
-	if m.TOCMaxDepth == 0 {
-		m.TOCMaxDepth = 3
-	}
-
-	mdDir, err := os.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-
-	f := []*MarkdownData{}
-
-	for _, content := range mdDir {
-		if ext := filepath.Ext(content.Name()); content.IsDir() || ext != ".md" {
-			continue
-		}
-		pathWithFilename := filepath.Join(path, content.Name())
-
-		festMd, err := m.parseFile(pathWithFilename)
-		if err != nil {
-			return nil, err
-		}
-
-		f = append(f, festMd)
-	}
-
-	return f, nil
-}
-
-// Return the original parser. Useful when you want to do something else with it.
-func (m *MarkdownProcessor) Goldmark() goldmark.Markdown { return m.md }
-
-func (m *MarkdownProcessor) parseFile(pathWithFilename string) (*MarkdownData, error) {
 	ctx := parser.NewContext()
-	filename := filepath.Base(pathWithFilename)
+	filename := filepath.Base(path)
 
 	if ext := filepath.Ext(filename); ext != ".md" {
 		return nil, errors.New("not an md file")
 	}
-	md, err := os.ReadFile(pathWithFilename)
+	md, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +93,43 @@ func (m *MarkdownProcessor) parseFile(pathWithFilename string) (*MarkdownData, e
 	return ptrFestMd, nil
 }
 
-// The type containing all data parsed from the markdown file.
+// ParseFiles parse all markdown files in the specified path.
+func (m *MarkdownProcessor) ParseFiles(path string) ([]*MarkdownData, error) {
+	if m.TOCMaxDepth == 0 {
+		m.TOCMaxDepth = 3
+	}
+
+	mdDir, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	f := []*MarkdownData{}
+
+	for _, content := range mdDir {
+		if ext := filepath.Ext(content.Name()); content.IsDir() || ext != ".md" {
+			continue
+		}
+		path := filepath.Join(path, content.Name())
+
+		festMd, err := m.ParseFile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		// Skip if caller decide to make it nil in ParseFile
+		if festMd != nil {
+			f = append(f, festMd)
+		}
+	}
+
+	return f, nil
+}
+
+// Unwrap returns the original goldmark.Markdown.
+func (m *MarkdownProcessor) Unwrap() goldmark.Markdown { return m.md }
+
+// MarkdownData contains all data parsed from the markdown file.
 type MarkdownData struct {
 	// Filename excluding the .md extension.
 	Slug string
@@ -139,7 +143,8 @@ type MarkdownData struct {
 	fm *frontmatter.Data
 }
 
-// Decode the frontmatter data. This will panic if data is not a pointer type. 
+// GetFrontmatter decodes the frontmatter data. This will panic if data is not a pointer type.
+//
 // Be sure to have the frontmatter seperators (i.e. - or +) to be equal in amount
 // for both sides, and don't have leading spaces, as it is one of the most
 // commons cause for the frontmatter not properly processed.

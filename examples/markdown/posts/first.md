@@ -1,9 +1,6 @@
 ---
 title: First Post
 published: 2025-07-27
-tags:
-  - tag1
-  - tag2
 ---
 
 # First Post
