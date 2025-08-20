@@ -4,6 +4,7 @@ package markdown
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,16 +24,7 @@ type MarkdownParser interface {
 	ParseFiles(path string) ([]*MarkdownData, error)
 }
 
-// MarkdownProcessor is the default FEST markdown parser. It is simple wrapper
-// of goldmark.Markdown.
-type MarkdownProcessor struct {
-	// The maximum depts of header that will be parsed. Default 3
-	TOCMaxDepth int
-
-	md goldmark.Markdown
-}
-
-// NewMarkdown initialize a new markdown parser with default configurations.
+// NewMarkdown initializes a new markdown parser with default configurations.
 func NewMarkdown(extensions ...goldmark.Extender) MarkdownParser {
 	exts := []goldmark.Extender{&frontmatter.Extender{}}
 	exts = append(exts, extensions...)
@@ -43,7 +35,16 @@ func NewMarkdown(extensions ...goldmark.Extender) MarkdownParser {
 	return m
 }
 
-// ParseFile a markdown file in the specified path.
+// MarkdownProcessor is the default FEST markdown parser. It is simple wrapper
+// of goldmark.Markdown.
+type MarkdownProcessor struct {
+	// The maximum depts of header that will be parsed. Default 3
+	TOCMaxDepth int
+
+	md goldmark.Markdown
+}
+
+// ParseFile parses a markdown file in the specified path.
 func (m *MarkdownProcessor) ParseFile(path string) (*MarkdownData, error) {
 	if m.TOCMaxDepth == 0 {
 		m.TOCMaxDepth = 3
@@ -54,6 +55,7 @@ func (m *MarkdownProcessor) ParseFile(path string) (*MarkdownData, error) {
 	if ext := filepath.Ext(filename); ext != ".md" {
 		return nil, errors.New("not an md file")
 	}
+
 	md, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -93,34 +95,22 @@ func (m *MarkdownProcessor) ParseFile(path string) (*MarkdownData, error) {
 	return ptrFestMd, nil
 }
 
-// ParseFiles parse all markdown files in the specified path.
+// ParseFiles parse all markdown files in the specified path. Internally, this calls
+// ScanForMarkdown, ParseFile, and skip any nil MarkdownData.
 func (m *MarkdownProcessor) ParseFiles(path string) ([]*MarkdownData, error) {
-	if m.TOCMaxDepth == 0 {
-		m.TOCMaxDepth = 3
-	}
-
-	mdDir, err := os.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-
 	f := []*MarkdownData{}
 
-	for _, content := range mdDir {
-		if ext := filepath.Ext(content.Name()); content.IsDir() || ext != ".md" {
-			continue
-		}
-		path := filepath.Join(path, content.Name())
-
+	if err := ScanForMarkdown(path, func(p string) error {
 		festMd, err := m.ParseFile(path)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		// Skip if caller decide to make it nil in ParseFile
 		if festMd != nil {
 			f = append(f, festMd)
 		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return f, nil
@@ -154,6 +144,29 @@ func (md *MarkdownData) GetFrontmatter(data any) error {
 	}
 	if err := md.fm.Decode(data); err != nil {
 		return err
+	}
+	return nil
+}
+
+// ScanForMarkdown scan a path for markdown files and pass the path and the filename
+// to fn as p. If there is an error, it will be os.ReadDir error or an error from
+// fn
+func ScanForMarkdown(path string, fn func(p string) error) error {
+	msg := "error scanning for markdown"
+	mdDir, err := os.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("%v: %w", msg, err)
+	}
+
+	for _, content := range mdDir {
+		if ext := filepath.Ext(content.Name()); content.IsDir() || ext != ".md" {
+			continue
+		}
+		p := filepath.Join(path, content.Name())
+
+		if err := fn(p); err != nil {
+			return fmt.Errorf("%v: %w", msg, err)
+		}
 	}
 	return nil
 }
