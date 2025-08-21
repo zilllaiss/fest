@@ -25,11 +25,11 @@ type MarkdownParser interface {
 }
 
 // NewMarkdown initializes a new markdown parser with default configurations.
-func NewMarkdown(extensions ...goldmark.Extender) MarkdownParser {
-	exts := []goldmark.Extender{&frontmatter.Extender{}}
-	exts = append(exts, extensions...)
+func NewMarkdown(options ...goldmark.Option) MarkdownParser {
+	opts := []goldmark.Option{goldmark.WithExtensions(&frontmatter.Extender{})}
+	opts = append(opts, options...)
 
-	m := &MarkdownProcessor{md: goldmark.New(goldmark.WithExtensions(exts...))}
+	m := &MarkdownProcessor{md: goldmark.New(opts...)}
 
 	m.md.Parser().AddOptions(parser.WithAutoHeadingID())
 	return m
