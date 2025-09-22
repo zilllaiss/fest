@@ -51,12 +51,14 @@ func postsFn(
 	rp *fest.RouteParam[*markdown.MarkdownData],
 ) (templ.Component, error) {
 	md := rp.GetItem()
-	rp.SetSlug(md.Slug)
 
 	var post Post
 	if err := md.GetFrontmatter(&post); err != nil {
 		return nil, err
 	}
+
+	rp.SetSlug(md.Slug)
+	rp.SetTitle(post.Title)
 
 	return postComp(post.Title, md.Slug, md.Content), nil
 }

@@ -17,7 +17,7 @@ import (
 )
 
 type MarkdownParser interface {
-	// ParseFiles parses the set markdown file.
+	// ParseFile parses the set markdown file.
 	ParseFile(path string) (*MarkdownData, error)
 
 	// ParseFiles parses all markdown files in a path.
@@ -44,7 +44,7 @@ type MarkdownProcessor struct {
 	md goldmark.Markdown
 }
 
-// ParseFile parses a markdown file in the specified path.
+// ParseFile parses a markdown file in path.
 func (m *MarkdownProcessor) ParseFile(path string) (*MarkdownData, error) {
 	if m.TOCMaxDepth == 0 {
 		m.TOCMaxDepth = 3
@@ -53,7 +53,7 @@ func (m *MarkdownProcessor) ParseFile(path string) (*MarkdownData, error) {
 	filename := filepath.Base(path)
 
 	if ext := filepath.Ext(filename); ext != ".md" {
-		return nil, errors.New("not an md file")
+		return nil, fmt.Errorf("not an md file: %v", filename)
 	}
 
 	md, err := os.ReadFile(path)
@@ -95,13 +95,13 @@ func (m *MarkdownProcessor) ParseFile(path string) (*MarkdownData, error) {
 	return ptrFestMd, nil
 }
 
-// ParseFiles parse all markdown files in the specified path. Internally, this calls
+// ParseFiles parse all markdown files in path. Internally, this calls
 // ScanForMarkdown, ParseFile, and skip any nil MarkdownData.
 func (m *MarkdownProcessor) ParseFiles(path string) ([]*MarkdownData, error) {
 	f := []*MarkdownData{}
 
 	if err := ScanForMarkdown(path, func(p string) error {
-		festMd, err := m.ParseFile(path)
+		festMd, err := m.ParseFile(p)
 		if err != nil {
 			return err
 		}

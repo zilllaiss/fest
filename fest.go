@@ -1,3 +1,4 @@
+// Package fest is the main fest package
 package fest
 
 import (
@@ -18,7 +19,7 @@ var wd = func() string {
 	return w
 }()
 
-// Site title options
+// SiteTitleOption specifies the title options
 type SiteTitleOption int
 
 const (
@@ -47,10 +48,10 @@ const (
 	ctxKeyError ctxKey = "error"
 )
 
-// Get the current router's title. This will panic if this is used outside templ.
+// GetTitle gets the current router's title. This will panic if this is used outside templ.
 func GetTitle(ctx context.Context) string { return ctx.Value(ctxKeyTitle).(string) }
 
-// The main type containing configuration for static files generation.
+// Generator contains configuration for static files generation.
 type Generator struct {
 	Head Head
 	Body Body
@@ -70,9 +71,10 @@ type Generator struct {
 	files, dirs []srcDst
 }
 
-// Generator configurations.
+// GeneratorConfig is configurations for Generator.
 type GeneratorConfig struct {
-	// Don't use the built-in base template (temfest.Base)
+	// Don't use the built-in base template that is temfest.Base. 
+	// Note that utilities that modify temfest.Base will be no-op.
 	NoBase bool
 
 	// Directory that will be used as root for finding necessary files.
@@ -88,7 +90,7 @@ type GeneratorConfig struct {
 	SiteTitleOption SiteTitleOption
 }
 
-// use nil to use default configs
+// NewGenerator creates a new generator. Use nil to use default configs
 func NewGenerator(ctx context.Context, siteName string, config *GeneratorConfig) *Generator {
 	g := &Generator{}
 
@@ -114,8 +116,8 @@ func NewGenerator(ctx context.Context, siteName string, config *GeneratorConfig)
 	return g
 }
 
-// Add a single route with the specified path that will generate a file from the component
-// relative from the Generator destionation.
+// AddRoute adds a single route with the specified path that will generate a file from the component
+// relative from the Generator destination.
 func (g *Generator) AddRoute(path string, comp templ.Component) *Route {
 	r := g.inspect(path, comp)
 
@@ -123,7 +125,7 @@ func (g *Generator) AddRoute(path string, comp templ.Component) *Route {
 	return r
 }
 
-// Add a single route with the specified path that
+// AddRouteFunc adds a single route with the specified path that
 // will generate a file from the component
 // relative from the Generator destionation.
 // All errors returned from this function will be handled
@@ -145,11 +147,11 @@ func (g *Generator) AddRouteFunc(
 	return r
 }
 
-// Return the generator context
+// Context returns the generator context.
 func (g *Generator) Context() context.Context { return g.ctx }
 
-// Copy src that is a file to the dst inside generated location.
-// Relative from Generator Source
+// CopyFile copies src that is a file to the dst inside generated location.
+// Relative from Source of g.
 func (g *Generator) CopyFile(src, dst string) {
 	path := ternary(len(g.src) > 0, g.src, wd)
 	g.files = append(g.files, srcDst{
@@ -158,9 +160,9 @@ func (g *Generator) CopyFile(src, dst string) {
 	})
 }
 
-// Copy src that is a directory to dst inside generated location.
+// CopyDir copies src that is a directory to dst inside generated location.
 // Will also copy the directory instead of the content-only.
-// Relative from Generator Source
+// Relative from Source set of g.
 func (g *Generator) CopyDir(src, dst string) {
 	path := ternary(len(g.src) > 0, g.src, wd)
 	g.dirs = append(g.dirs, srcDst{
@@ -169,7 +171,7 @@ func (g *Generator) CopyDir(src, dst string) {
 	})
 }
 
-// Generate all the components added to g.
+// Generate generates all the components added to g.
 func (g *Generator) Generate() error {
 	if err := os.MkdirAll(g.dest, 0744); err != nil {
 		return fmt.Errorf("error making dir: %w", err)
@@ -299,6 +301,7 @@ func (g *Generator) addError(path string, err error) {
 	g.ctx = context.WithValue(g.ctx, ctxKeyError, errs)
 }
 
+// Route contains data necessary to generate a route.
 type Route struct {
 	noTitle bool
 
@@ -312,20 +315,20 @@ type Route struct {
 	base templ.Component
 }
 
-// Set the Route title. This will use the site's name
+// SetTitle sets the Route title. This will use the site's name
 // when title is not set, unless SiteName is  set to none.
 func (r *Route) SetTitle(title string) *Route {
 	r.title = title
 	return r
 }
 
-// Override the base component. Note that it must have the implemented templ { children... }
+// OverrideBase overrides the base component. Note that it must have the implemented templ { children... }
 func (r *Route) OverrideBase(comp templ.Component) *Route {
 	r.base = comp
 	return r
 }
 
-// Disable the built-in title.
+// NoTitle disables the built-in title. This makes SetTitle methods in FEST no-op.
 func (r *Route) NoTitle() *Route {
 	r.noTitle = true
 	return r
@@ -339,15 +342,16 @@ func (r RouteError) Unwrap() error { return r.complete }
 
 func (r RouteError) Error() string { return "route error" }
 
-// Components that will be rendered in the html <head> tag.
+// Head contains templ.Component type that will be rendered in the html <head> tag.
 type Head []templ.Component
 
-// Append templ components to <head> tag.
+// Add appends templ.Component type to <head> tag.
 func (h *Head) Add(comp ...templ.Component) { *h = append(*h, comp...) }
 
-// Components that will be rendered in the html <body> tag. This is intended for use with
-// embeed tags such as <script>, <style>, etc. Use AddRoute to add the main component.
+// Body contains components that will be rendered in the html <body> tag. 
+// This is intended for use with embed tags such as <script>, <style>, etc. 
+// Use AddRoute to add the main component.
 type Body []templ.Component
 
-// Append templ components to Body
+// Add appends templ.Component type to Body
 func (b *Body) Add(comp ...templ.Component) { *b = append(*b, comp...) }
