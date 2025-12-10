@@ -23,7 +23,7 @@ func CreateRoutes(config *fest.GeneratorConfig) *fest.Generator {
 	g.CopyFile("examples/basic/404.html", "")
 
 	// add global style in the header
-	g.Head.Add(
+	g.HeadBody.Head(
 		temfest.ImportStyle("/assets/styles.css"),
 		temfest.ImportStyle("/assets/nested/styles.css"),
 	)

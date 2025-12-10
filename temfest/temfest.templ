@@ -1,14 +1,29 @@
 package temfest 
 
-templ Base(title, lang string, headerComps, bodyComps []templ.Component) {
+// Base is the base for all. It is recommended
+templ Base(
+	title string,
+	mainComp templ.Component,
+	headerComps, bodyComps []templ.Component,
+	config *BaseConfig,
+) {
+	{{
+		if len(config.CharSet) < 1 {
+			config.CharSet = "UTF-8"
+		}
+	}}
 	<!DOCTYPE html>
-	<html lang={ lang }>
+	<html
+		if len(config.Lang) > 0 {
+			lang={ config.Lang }
+		}
+	>
 		<head>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            if len(title) > 0 { 
-                <title>{ title }</title>
-            }
+			<meta charset={ config.CharSet }/>
+			if !config.NoViewport {
+				<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			}
+			<title>{ title }</title>
 			if headerComps != nil {
 				for _, v := range headerComps {
 					@v
@@ -16,6 +31,7 @@ templ Base(title, lang string, headerComps, bodyComps []templ.Component) {
 			}
 		</head>
 		<body>
+			@mainComp
 			if bodyComps != nil {
 				for _, v := range bodyComps {
 					@v
@@ -25,31 +41,46 @@ templ Base(title, lang string, headerComps, bodyComps []templ.Component) {
 	</html>
 }
 
-// this is used when overriding base component in Route
-templ Override(base, comp templ.Component) {
-    @base {
-        @comp
-    }
+// BaseConfig is the configuration for temfest.Base
+type BaseConfig struct {
+	// Lang sets the language.
+	Lang string
+
+	// CharSet sets a meta tag with charset attribute. Default is UTF-8.
+	CharSet string
+
+	// NoViewport disables `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>`
+	NoViewport bool
+}
+
+// Nest nests comp inside base
+templ Nest(base, comp templ.Component) {
+	@base {
+		@comp
+	}
 }
 
 templ ImportScript(path string, module, useDefer bool) {
-    <script src={ path } 
-        if module {
-            type="module"
-        }
-        defer?={ useDefer }
-    ></script>
+	<script src={ path } if module {
+	type="module"
+} defer?={ useDefer }></script>
 }
 
 templ ImportStyle(path string) {
-    <link rel="stylesheet" href={ path }/>
+	<link rel="stylesheet" href={ path }/>
 }
 
 templ ImportIcon(path, iconType string) {
-    {{ if len(path) == 0 { path = "/favicon.ico" }}}
-    <link rel="icon" href={ path } 
-        if len(iconType) != 0 {
-            type={ iconType }
-        }
-    />
+	{{
+		if len(path) == 0 {
+			path = "/favicon.ico"
+		}
+	}}
+	<link
+		rel="icon"
+		href={ path }
+		if len(iconType) != 0 {
+			type={ iconType }
+		}
+	/>
 }

@@ -1,6 +1,7 @@
 **/dist/*
-src/*
+src
 examples/**/**_templ.go
+tmp/
 
 # binaries
 main

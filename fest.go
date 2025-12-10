@@ -19,24 +19,18 @@ var wd = func() string {
 	return w
 }()
 
-// SiteTitleOption specifies the title options
-type SiteTitleOption int
+// SiteNameOption specifies the title options
+type SiteNameOption int
 
 const (
-	// Show the site title at the end with dash as seperator
-	SiteTitleDashBack SiteTitleOption = iota
+	// Show the site title at the end
+	SiteNameBack SiteNameOption = iota
 
-	// Show the site title at the beginning with dash as seperator
-	SiteTitleDashFront
+	// Show the site title at the beginning
+	SiteNameFront
 
-	// Show the site title at the back with a colon as seperator
-	SiteTitleColonBack
-
-	// Show the site title at the beginning with a colon as seperator
-	SiteTitleColonFront
-
-	// Don't show site title
-	SiteTitleNone
+	// Don't show site name in the title
+	SiteNameNone
 )
 
 type srcDst struct{ src, dst string }
@@ -48,20 +42,21 @@ const (
 	ctxKeyError ctxKey = "error"
 )
 
-// GetTitle gets the current router's title. This will panic if this is used outside templ.
+// GetTitle gets the current router's title.
 func GetTitle(ctx context.Context) string { return ctx.Value(ctxKeyTitle).(string) }
 
 // Generator contains configuration for static files generation.
 type Generator struct {
-	Head Head
-	Body Body
+	HeadBody HeadBody
 
 	src      string
 	dest     string
 	siteName string
-	lang     string
 
-	siteTitleOption SiteTitleOption
+	baseConfig temfest.BaseConfig
+
+	siteTitleOption SiteNameOption
+	seperator       string
 
 	ctx    context.Context
 	noBase bool
@@ -73,21 +68,28 @@ type Generator struct {
 
 // GeneratorConfig is configurations for Generator.
 type GeneratorConfig struct {
-	// Don't use the built-in base template that is temfest.Base. 
-	// Note that utilities that modify temfest.Base will be no-op.
+	// Don't use the built-in base template that is temfest.Base.
+	// Note that utilities that modify temfest.Base will be no-op,
+	// thus it is recommended to modify Head, Body, and BaseConfig instead.
 	NoBase bool
 
-	// Directory that will be used as root for finding necessary files.
+	// Directory that will be used as root directory for finding necessary files.
+	// By default it's "."
 	Source string
 
-	// Directory where the generated files will be.
+	// Directory where static files will be generated. By default it's "./dist".
 	Destination string
 
-	// HTML language. Does not do anything if Base sets to none.
-	Lang string
+	// SiteNameOption is the position in the title where the site's
+	// should be rendered. By default it's SiteNameBack.
+	SiteNameOption SiteNameOption
 
-	// Styling for the site title.
-	SiteTitleOption SiteTitleOption
+	// Seperator is the string used to seperate page title with site's name.
+	// By default it's " - ".
+	Seperator string
+
+	// BaseConfig is temfest.Base config.
+	BaseConfig temfest.BaseConfig
 }
 
 // NewGenerator creates a new generator. Use nil to use default configs
@@ -97,8 +99,8 @@ func NewGenerator(ctx context.Context, siteName string, config *GeneratorConfig)
 	if config == nil {
 		config = &GeneratorConfig{Destination: "dist"}
 	}
-	if len(config.Lang) < 1 {
-		config.Lang = "en"
+	if len(config.Seperator) < 1 {
+		config.Seperator = " - "
 	}
 
 	festDest, ok := os.LookupEnv("FEST_DEST")
@@ -109,9 +111,10 @@ func NewGenerator(ctx context.Context, siteName string, config *GeneratorConfig)
 
 	g.ctx = ctx
 	g.siteName = siteName
-	g.lang = config.Lang
 	g.noBase = config.NoBase
-	g.siteTitleOption = config.SiteTitleOption
+	g.siteTitleOption = config.SiteNameOption
+	g.seperator = config.Seperator
+	g.baseConfig = config.BaseConfig
 
 	return g
 }
@@ -173,7 +176,7 @@ func (g *Generator) CopyDir(src, dst string) {
 
 // Generate generates all the components added to g.
 func (g *Generator) Generate() error {
-	if err := os.MkdirAll(g.dest, 0744); err != nil {
+	if err := os.MkdirAll(g.dest, 0o744); err != nil {
 		return fmt.Errorf("error making dir: %w", err)
 	}
 
@@ -224,7 +227,7 @@ func (g *Generator) Generate() error {
 		}
 
 		// why no MkdirAll for root?
-		if err := os.MkdirAll(filepath.Join(g.dest, dir), 0744); err != nil {
+		if err := os.MkdirAll(filepath.Join(g.dest, dir), 0o744); err != nil {
 			return fmt.Errorf("error while making parent directory %v: %w", g.dest, err)
 		}
 
@@ -234,24 +237,20 @@ func (g *Generator) Generate() error {
 		}
 		defer f.Close()
 
-		var title string
+		var title, tc string
 
-		if r.noTitle {
-			// let the title be empty
-		} else if len(r.title) > 0 {
+		if r.title != nil {
+			rt := *r.title
+			tc = *r.title
 			switch g.siteTitleOption {
-			case SiteTitleDashBack:
-				title = r.title + " - " + g.siteName
-			case SiteTitleDashFront:
-				title = g.siteName + " - " + r.title
-			case SiteTitleColonBack:
-				title = r.title + ": " + g.siteName
-			case SiteTitleColonFront:
-				title = g.siteName + ": " + r.title
-			case SiteTitleNone:
-				title = g.siteName
+			case SiteNameBack:
+				title = rt + g.seperator + g.siteName
+			case SiteNameFront:
+				title = g.siteName + g.seperator + rt
+			case SiteNameNone:
+				title = rt
 			default:
-				return errors.New("unrecognized SiteName enum")
+				return errors.New("unrecognized SiteNameOption enum")
 			}
 		} else {
 			title = g.siteName
@@ -259,16 +258,21 @@ func (g *Generator) Generate() error {
 
 		// override the base
 		if r.base != nil {
-			r.comp = temfest.Override(r.base, r.comp)
-		} else {
-			if !g.noBase {
-				// prepend the main component
-				body := append([]templ.Component{r.comp}, g.Body...)
-				r.comp = temfest.Base(title, g.lang, g.Head, body)
+			r.comp = temfest.Nest(r.base, r.comp)
+		} else if !g.noBase {
+			if r.baseConfig == nil {
+				r.baseConfig = &temfest.BaseConfig{}
 			}
+
+			cp := ptr(g.baseConfig)
+			inheritChildValues(cp, r.baseConfig)
+			head := append(g.HeadBody.head, r.HeadBody.head...)
+			body := append(g.HeadBody.body, r.HeadBody.body...)
+
+			r.comp = temfest.Base(title, r.comp, head, body, cp)
 		}
 
-		newCtx := context.WithValue(g.ctx, ctxKeyTitle, r.title)
+		newCtx := context.WithValue(g.ctx, ctxKeyTitle, tc)
 
 		if err := r.comp.Render(newCtx, f); err != nil {
 			return fmt.Errorf("error while rendering: %w", err)
@@ -303,34 +307,34 @@ func (g *Generator) addError(path string, err error) {
 
 // Route contains data necessary to generate a route.
 type Route struct {
-	noTitle bool
-
 	path  string
 	comp  templ.Component
-	title string
+	title *string
 
 	isHTMLFile bool
 
 	// Only non-nil when overrided
 	base templ.Component
+
+	baseConfig *temfest.BaseConfig
+	HeadBody   HeadBody
 }
 
-// SetTitle sets the Route title. This will use the site's name
-// when title is not set, unless SiteName is  set to none.
+// SetTitle sets the Route title. By default,
+// the route will use site's name.
 func (r *Route) SetTitle(title string) *Route {
-	r.title = title
+	r.title = &title
+	return r
+}
+
+func (r *Route) BaseConfig(conf temfest.BaseConfig) *Route {
+	r.baseConfig = &conf
 	return r
 }
 
 // OverrideBase overrides the base component. Note that it must have the implemented templ { children... }
 func (r *Route) OverrideBase(comp templ.Component) *Route {
 	r.base = comp
-	return r
-}
-
-// NoTitle disables the built-in title. This makes SetTitle methods in FEST no-op.
-func (r *Route) NoTitle() *Route {
-	r.noTitle = true
 	return r
 }
 
@@ -342,16 +346,9 @@ func (r RouteError) Unwrap() error { return r.complete }
 
 func (r RouteError) Error() string { return "route error" }
 
-// Head contains templ.Component type that will be rendered in the html <head> tag.
-type Head []templ.Component
+// HeadBody represents `<head>` and `<body>` tags.
+// It is mainly used to append.
+type HeadBody struct{ head, body []templ.Component }
 
-// Add appends templ.Component type to <head> tag.
-func (h *Head) Add(comp ...templ.Component) { *h = append(*h, comp...) }
-
-// Body contains components that will be rendered in the html <body> tag. 
-// This is intended for use with embed tags such as <script>, <style>, etc. 
-// Use AddRoute to add the main component.
-type Body []templ.Component
-
-// Add appends templ.Component type to Body
-func (b *Body) Add(comp ...templ.Component) { *b = append(*b, comp...) }
+func (hb *HeadBody) Head(comps ...templ.Component) { hb.head = append(hb.head, comps...) }
+func (hb *HeadBody) Body(comps ...templ.Component) { hb.body = append(hb.body, comps...) }

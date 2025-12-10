@@ -55,7 +55,7 @@ templ Post(title, content string) {
 }
 ```
 
-Import it to your Go files and use it with fest like a router!
+Import it to your Go files and use it with FEST like a router!
 ```go
 package main
 
@@ -79,7 +79,7 @@ func main() {
 	g.CopyFile("404.html", "")
 
 	// add global style in the header
-	g.Head.Add(
+	g.HeadBody.Head(
 		// fest provides commonly used templates in temfest package
 		temfest.ImportStyle("/assets/styles.css"),
 		temfest.ImportStyle("/assets/nested/styles.css"),
@@ -88,7 +88,7 @@ func main() {
 	// add homepage. This will use the site's name as Route title is not set
 	g.AddRoute("/", views.Index())
 
-	// set the page title. If not set, fest will use the site's name by default
+	// set the page title. If not set, FEST will use the site's name by default
 	g.AddRoute("/about", views.About("Zill_Laiss")).
 		SetTitle("About Us")
 
@@ -109,7 +109,7 @@ Then run the binary to generate your website.
 templ generate && go run main.go
 ```
 
-By default it is available in `/dest` folder inside your project directory.
+By default it is available in `/dist` folder inside your project directory.
 
 See [examples]("https://github.com/zilllaiss/templ") for more.
 
@@ -138,10 +138,9 @@ posts := []post{
 }
 
 // this {s} is a slug and will be replaced, by default it is 1-based index
-// of slices' item passed previously unless your override it with SetSlug.
+// of for each item captured from the slice passed, unless you override it with SetSlug.
 // see postsFn below
-fest.NewRoutesT("/posts/{s}", posts).
-    SetTitle("{s}").AddToGenerator(g, postsFn)
+fest.NewRoutesT("/posts/{s}", posts).AddToGenerator(g, postsFn)
 ```
 
 ## LICENSE

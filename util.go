@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 )
 
 func ternary[T any](cond bool, t T, f T) T {
@@ -13,6 +14,22 @@ func ternary[T any](cond bool, t T, f T) T {
 		return t
 	}
 	return f
+}
+
+// inheritChildValues set the corresponding parent's field value to child's
+// if the latter is not empty.
+func inheritChildValues[T any](parent, child T) {
+	parentVal := reflect.ValueOf(parent).Elem()
+	childVal := reflect.ValueOf(child).Elem()
+
+	for i := range parentVal.NumField() {
+		parentField := parentVal.Field(i)
+		childField := childVal.Field(i)
+
+		if !childField.IsZero() && parentField.Interface() != childField.Interface() {
+			parentField.Set(childVal)
+		}
+	}
 }
 
 func copyFile(src, dst string) error {
@@ -81,3 +98,5 @@ func fatal(err error) {
 	fmt.Println(err)
 	os.Exit(1)
 }
+
+func ptr[T any](t T) *T { return &t }

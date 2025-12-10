@@ -11,15 +11,22 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/zilllaiss/fest/temfest"
 )
 
 // Routes generates multiple routes. User must call AddToGenerator
 // in order to add the routes to the Generator.
 type Routes[T any] struct {
-	path    string
-	title   string
-	data    []T
+	HeadBody   HeadBody
+
+	path  string
+	title *string
+	data  []T
+
+	// configs
 	useData bool
+
+	baseConfig *temfest.BaseConfig
 }
 
 // NewRoutes creates routes from the data with specified size.
@@ -63,40 +70,62 @@ func NewPaginatedRoutes[T any](path string, data []T, size int) *Routes[*Paginat
 }
 
 // AddToGenerator adds routes to the set Generator.
-func (r *Routes[T]) AddToGenerator(g *Generator, fn RouteFunc[T]) {
-	if !strings.Contains(r.path, "{s}") {
-		g.addError(r.path, errors.New("slug not found"))
+func (rs *Routes[T]) AddToGenerator(g *Generator, fn RouteFunc[T]) {
+	if !strings.Contains(rs.path, "{s}") {
+		g.addError(rs.path, errors.New("slug not found"))
 		return
 	}
-	for i, d := range r.data {
-		slug := ternary(r.useData, fmt.Sprintf("%v", r.data[i]), strconv.Itoa(i+1))
+	for i, d := range rs.data {
+		slug := ternary(rs.useData, fmt.Sprintf("%v", rs.data[i]), strconv.Itoa(i+1))
 		rp := &RouteParam[T]{item: d, slug: slug}
 
 		comp, err := fn(g.ctx, rp)
 		if err != nil {
-			g.addError(r.path, err)
+			g.addError(rs.path, err)
 			return
 		}
 		slug = rp.slug
+		if rs.title == nil {
+			rs.title = ptr("{s}")
+		}
 
 		ext := filepath.Ext(slug)
 		if len(ext) > 0 {
 			slug = strings.TrimSuffix(slug, ext)
 		}
 
-		t := ternary(len(rp.title) > 0, rp.title, r.title)
+		t := ternary(len(rp.title) > 0, rp.title, *rs.title)
 
-		path := strings.ReplaceAll(r.path, "{s}", slug)
+		path := strings.ReplaceAll(rs.path, "{s}", slug)
 		title := strings.ReplaceAll(t, "{s}", slug)
 
-		g.AddRoute(path, comp).SetTitle(title)
+		if rs.baseConfig == nil {
+			rs.baseConfig = &temfest.BaseConfig{}
+		}
+		if rp.baseConfig != nil {
+			inheritChildValues(rs.baseConfig, rp.baseConfig)
+			rs.HeadBody.Head(rp.HeadBody.head...)
+			rs.HeadBody.Body(rp.HeadBody.body...)
+		}
+		r := g.AddRoute(path, comp).SetTitle(title).BaseConfig(*rs.baseConfig)
+
+		r.HeadBody.Head(rs.HeadBody.head...)
+		r.HeadBody.Body(rs.HeadBody.body...)
 	}
 }
 
 // SetTitle sets each item route's title where `{s}` will be replaced with slug.
-func (r *Routes[T]) SetTitle(title string) *Routes[T] {
-	r.title = title
-	return r
+// If the title is empty, then only the site's name used. The default is "{s}"
+func (rs *Routes[T]) SetTitle(title string) *Routes[T] {
+	rs.title = &title
+	return rs
+}
+
+// BaseConfig sets the temfest.Base config for the routes.
+// Unset/empty field will be no-op.
+func (rs *Routes[T]) BaseConfig(conf temfest.BaseConfig) *Routes[T] {
+	rs.baseConfig = &conf
+	return rs
 }
 
 type RouteFunc[T any] = func(context.Context, *RouteParam[T]) (templ.Component, error)
@@ -106,7 +135,14 @@ type RouteParam[T any] struct {
 	item  T
 	slug  string
 	title string
+
+	baseConfig *temfest.BaseConfig
+	HeadBody   HeadBody
 }
+
+// BaseConfig sets the temfest.Base config for the current route.
+// Unset/empty field will be no-op.
+func (rp *RouteParam[T]) BaseConfig(conf temfest.BaseConfig) { rp.baseConfig = &conf }
 
 // GetSlug gets the currently set slug.
 func (rp *RouteParam[T]) GetSlug() string { return rp.slug }
