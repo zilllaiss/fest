@@ -4,7 +4,11 @@
   </a>
 </p>
 
-# FEST 
+# NOTICE
+
+The development of this library has been moved to [Codeberg](https://codeberg.org/zill_laiss/fest).
+
+## FEST 
 
 Fantastically Easy Static-site with Templ (FEST) is a minimalistic static-site generator that integrates nicely with Go & [Templ](https://github.com/a-h/templ). It is aimed for Go developers to generate a static-website with existing Go libraries and available knowledge.
 
